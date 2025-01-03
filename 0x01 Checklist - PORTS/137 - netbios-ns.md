@@ -1,0 +1,1 @@
+**NetBIOS Name Service (NetBIOS-NS)** : 用于将NetBIOS计算机名解析为IP地址

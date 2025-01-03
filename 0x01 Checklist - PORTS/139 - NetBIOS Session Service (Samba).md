@@ -1,0 +1,1 @@
+**NetBIOS Session Service** : 是 NetBIOS 协议栈的一部分，用于在计算机之间建立和维护会话, 通常用于 SMB（Server Message Block）协议的会话建立。
