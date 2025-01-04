@@ -125,7 +125,7 @@ exploit().cmdloop()
 超时时间为3
 ```
 
-**phpmyadmin 有漏洞的版本： version 4.9.0 - 4.9.1**  : [CMS 漏洞，攻击向量](../CMS%20漏洞，攻击向量.md)
+**phpmyadmin 有漏洞的版本： version 4.9.0 - 4.9.1**  : [CMS (Web) 漏洞，攻击向量](../CMS%20(Web)%20漏洞，攻击向量.md)
 
 **SQLi 写入 WebShell** :
 ```sql

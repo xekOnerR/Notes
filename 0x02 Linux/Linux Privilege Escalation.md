@@ -118,12 +118,21 @@ find / -name backup 2>/dev/null
 查找home目录中的.cache 如果有motd.legal-displayed 文件夹 ， 见下motd.legal-displayed提权
 ```
 
+- (偏 ctf 的端口敲门配置文件)
+
+```bash
+/etc/knockd.conf
+/var/log/knockd.log
+
+详细利用：
+for i in 571 290 911; do nmap -Pn --host-timeout 100 --max-retries 0 -p $i <ATTACK IP> >/dev/null； done;
+```
+
 ```shell
 su <高权限USER>
 ```
 
 **遇到有 sudo -l 没见过的，--help 和 man 查看命令手册帮助可能不太一样**
-
 ```bash
 man genie
 ```

