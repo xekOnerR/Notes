@@ -241,10 +241,33 @@ hashcat passwd /usr/share/wordlists/rockyou.txt -m []
 -r /usr/share/hashcat/rules/best64.rule --force
 ```
 
-创建规则，rockyou 的末尾增加数字 `1`
+- 规则
 ```bash
-echo '$1' > rules.txt
 hashcat -m 13100 hash /usr/share/wordlists/rockyou.txt -r ./rules.txt
+```
+
+```
+echo '$1' > rules.txt (末尾增加数字 1)
+$2$0$2$0 (末尾增加数字 2020)
+
+hashcat.exe -a 3 -m 1000 ntlm.txt -1 ?d?s ?u?l?l?l?l?l?l?l?1  (自定义掩码爆破, 例如Password!)
+`-1 ?d?s` 定义自定义字符集
+`?u?l?l?l?l?l?1` 是掩码
+? | Charset
+===+=========
+l | abcdefghijklmnopqrstuvwxyz
+u | ABCDEFGHIJKLMNOPQRSTUVWXYZ
+d | 0123456789
+h | 0123456789abcdef
+H | 0123456789ABCDEF
+s | !"#$%&'()*+,-./:;<=>?@[\]^_`{|}~
+a | ?l?u?d?s
+b | 0x00 - 0xff
+===+=========
+ZeroPointSecurity?d?d?d?d （例如ZeroPointSecurity1234）
+
+也可以创建example.hcmask: 
+?d?s,?u?l?l?l?l?l?l?l?l?1
 ```
 
 
